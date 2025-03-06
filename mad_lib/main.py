@@ -1,10 +1,9 @@
-# prompt: create a mad-lib app make on this topic "ai agentic" run on streamlit and deploy and made it on python,story consist on 15 lines and intrusting
-
+# Description: This is a simple Streamlit app that generates a Mad Lib story about an AI agent.
 import streamlit as st
 
 
 def madlib_ai_agent():
-    st.title("AI Agentic Mad Libs")
+    st.title("AI Agentic Mad Libs APP")
     st.write("Fill in the blanks to create a hilarious AI story!")
 
     adjective1 = st.text_input("Adjective 1 (e.g., intelligent):")
