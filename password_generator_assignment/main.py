@@ -7,7 +7,7 @@ def main():
     st.write("Generate strong and secure passwords")
 
     # Password length input
-    length = st.slider("Select Password Length", min_value=6, max_value=32, value=12)
+    length = st.number_input("Enter Password Length", min_value=6, max_value=32, value=12, step=1)
 
     # Password complexity options
     use_uppercase = st.checkbox("Include Uppercase Letters", value=True)
@@ -35,7 +35,10 @@ def main():
             st.error("Please select at least one character type")
 
         # Add password strength indicator
-        if len(password) >= 12 and sum([use_uppercase, use_lowercase, use_numbers, use_special]) >= 3:
+        
+        if len(password) >= 24 and sum([use_uppercase, use_lowercase, use_numbers, use_special]) >= 4:
+            st.write("Password Strength: too Strong Password!💪💪")
+        elif len(password) >= 12 and sum([use_uppercase, use_lowercase, use_numbers, use_special]) >= 3:
             st.write("Password Strength: Strong Password! 💪")
         elif len(password) >= 8 and sum([use_uppercase, use_lowercase, use_numbers, use_special]) >= 2:
             st.write("Password Strength: ⚠️ Moderate Password - Consider adding more security features.")
