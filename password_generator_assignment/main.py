@@ -4,10 +4,10 @@ def main():
     import string
 
     st.title("Password Generator App")
-    st.write("Generate strong and secure passwords")
+    st.header("Generate strong and secure passwords")
 
     # Password length input
-    length = st.number_input("Enter Password Length", min_value=6, max_value=32, value=12, step=1)
+    length = st.number_input("Enter Password Length", min_value=0, max_value=32, value=12, step=1)
 
     # Password complexity options
     use_uppercase = st.checkbox("Include Uppercase Letters", value=True)
@@ -16,6 +16,14 @@ def main():
     use_special = st.checkbox("Include Special Characters", value=True)
 
     if st.button("Generate Password"):
+        # Check for zero or less than 6 length
+        if length == 0:
+            st.error("Password length cannot be 0. Please enter a length greater than 0.")
+            return
+        elif length < 6:
+            st.error("Password length must be at least 6 characters for security. Please enter a longer length.")
+            return
+
         # Create character pool based on selected options
         chars = ""
         if use_uppercase:
@@ -42,8 +50,10 @@ def main():
             st.write("Password Strength: Strong Password! 💪")
         elif len(password) >= 8 and sum([use_uppercase, use_lowercase, use_numbers, use_special]) >= 2:
             st.write("Password Strength: ⚠️ Moderate Password - Consider adding more security features.")
-        else:
+        elif len(password) >= 5 and sum([use_uppercase, use_lowercase, use_numbers, use_special]) >= 2:
             st.write("Password Strength: ❌ Weak Password - Improve it using the suggestions above.")
-
+        else:
+            st.write("Password Strength: ❌ Very Weak Password - Please increase length and add more character types.")
+            
 if __name__ == "__main__":
     main()
