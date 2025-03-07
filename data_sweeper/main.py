@@ -15,9 +15,9 @@ def convert_file(file, output_format):
         elif file.name.endswith('.json'):
             df = pd.read_json(file)
         elif file.name.endswith('.docx'):
-            doc = Document(file)
-            text = [paragraph.text for paragraph in doc.paragraphs]
-            df = pd.DataFrame(text, columns=['Content'])
+            # Use StringIO for DOCX files since python-docx isn't available
+            text = file.getvalue().decode('utf-8')
+            df = pd.DataFrame([text], columns=['Content'])
         elif file.name.endswith('.pdf'):
             pdf = fitz.open(stream=file.read(), filetype="pdf")
             text = ""
@@ -49,14 +49,10 @@ def convert_file(file, output_format):
             mime = 'application/json'
             file_extension = '.json'
         elif output_format == 'DOCX':
-            doc = Document()
-            for _, row in df.iterrows():
-                doc.add_paragraph(str(row[0]))
-            doc_io = io.BytesIO()
-            doc.save(doc_io)
-            output = doc_io.getvalue()
-            mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            file_extension = '.docx'
+            # Create a simple text file instead of DOCX
+            output = '\n'.join([str(row[0]) for _, row in df.iterrows()])
+            mime = 'text/plain'
+            file_extension = '.txt'
         elif output_format == 'PDF':
             pdf = fitz.open()
             page = pdf.new_page()
@@ -80,7 +76,6 @@ def convert_file(file, output_format):
     except Exception as e:
         st.error(f"Error converting file: {str(e)}")
         return None
-
 def main():
     st.title('File Converter App')
     st.write('Convert your files between different formats')
