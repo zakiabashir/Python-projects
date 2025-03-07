@@ -103,4 +103,4 @@ st.sidebar.write("• TXT ↔ CSV")
 
 # Footer
 st.markdown("---")
-st.markdown("Made with ❤️ by DataSweeper")
+st.markdown("Made with ❤️ by Zakia Bashir")
