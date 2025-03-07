@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from docx import Document
 import fitz  # PyMuPDF for PDF
 from PIL import Image  # For images
 import io
@@ -15,8 +14,8 @@ def convert_file(file, output_format):
         elif file.name.endswith('.json'):
             df = pd.read_json(file)
         elif file.name.endswith('.docx'):
-            # Use StringIO for DOCX files since python-docx isn't available
-            text = file.getvalue().decode('utf-8')
+            # Read DOCX as plain text
+            text = file.read().decode('utf-8', errors='ignore')
             df = pd.DataFrame([text], columns=['Content'])
         elif file.name.endswith('.pdf'):
             pdf = fitz.open(stream=file.read(), filetype="pdf")
@@ -76,6 +75,7 @@ def convert_file(file, output_format):
     except Exception as e:
         st.error(f"Error converting file: {str(e)}")
         return None
+
 def main():
     st.title('File Converter App')
     st.write('Convert your files between different formats')
