@@ -1,115 +1,106 @@
 import streamlit as st
 import pandas as pd
-import fitz  # PyMuPDF for PDF
-from PIL import Image  # For images
+import numpy as np
 import io
+import json
+import xml.etree.ElementTree as ET
+import csv
+from PIL import Image
 
-def convert_file(file, output_format):
+st.set_page_config(page_title="DataSweeper - File Converter", layout="wide")
+
+st.title("DataSweeper - Universal File Converter")
+st.write("Convert between multiple file formats easily!")
+
+# Supported formats
+input_formats = ["CSV", "Excel", "JSON", "XML", "TXT"]
+output_formats = ["CSV", "Excel", "JSON", "XML", "TXT"]
+
+# Sidebar
+st.sidebar.title("Settings")
+input_format = st.sidebar.selectbox("Select Input Format", input_formats)
+output_format = st.sidebar.selectbox("Select Output Format", output_formats)
+
+# File uploader
+uploaded_file = st.file_uploader(f"Upload your {input_format} file", type=[format.lower() for format in input_formats])
+
+if uploaded_file is not None:
     try:
-        # Read the input file
-        if file.name.endswith('.csv'):
-            df = pd.read_csv(file)
-        elif file.name.endswith('.xlsx') or file.name.endswith('.xls'):
-            df = pd.read_excel(file)
-        elif file.name.endswith('.json'):
-            df = pd.read_json(file)
-        elif file.name.endswith('.docx'):
-            # Read DOCX as plain text
-            text = file.read().decode('utf-8', errors='ignore')
-            df = pd.DataFrame([text], columns=['Content'])
-        elif file.name.endswith('.pdf'):
-            pdf = fitz.open(stream=file.read(), filetype="pdf")
-            text = ""
-            for page in pdf:
-                text += page.get_text()
-            df = pd.DataFrame([text], columns=['Content'])
-        elif file.name.endswith(('.jpg', '.jpeg', '.png')):
-            img = Image.open(file)
-            # Convert image to bytes
-            img_byte_arr = io.BytesIO()
-            img.save(img_byte_arr, format=img.format)
-            img_byte_arr = img_byte_arr.getvalue()
-            df = pd.DataFrame([{'Image': img_byte_arr}])
-        else:
-            st.error("Unsupported file format")
-            return None
-            
-        # Convert to selected format
-        if output_format == 'CSV':
-            output = df.to_csv(index=False)
-            mime = 'text/csv'
-            file_extension = '.csv'
-        elif output_format == 'Excel':
-            output = df.to_excel(index=False)
-            mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            file_extension = '.xlsx'
-        elif output_format == 'JSON':
-            output = df.to_json()
-            mime = 'application/json'
-            file_extension = '.json'
-        elif output_format == 'DOCX':
-            # Create a simple text file instead of DOCX
-            output = '\n'.join([str(row[0]) for _, row in df.iterrows()])
-            mime = 'text/plain'
-            file_extension = '.txt'
-        elif output_format == 'PDF':
-            pdf = fitz.open()
-            page = pdf.new_page()
-            for _, row in df.iterrows():
-                page.insert_text((50, 50), str(row[0]))
-            pdf_bytes = pdf.write()
-            output = pdf_bytes
-            mime = 'application/pdf'
-            file_extension = '.pdf'
-        elif output_format in ['JPG', 'PNG']:
-            if 'Image' in df.columns:
-                output = df['Image'].iloc[0]
-                mime = 'image/jpeg' if output_format == 'JPG' else 'image/png'
-                file_extension = '.jpg' if output_format == 'JPG' else '.png'
-            else:
-                st.error("Cannot convert to image format")
-                return None
-            
-        return output, mime, file_extension
-        
-    except Exception as e:
-        st.error(f"Error converting file: {str(e)}")
-        return None
+        # Read input file based on format
+        if input_format == "CSV":
+            df = pd.read_csv(uploaded_file)
+        elif input_format == "Excel":
+            df = pd.read_excel(uploaded_file)
+        elif input_format == "JSON":
+            df = pd.read_json(uploaded_file)
+        elif input_format == "XML":
+            xml_data = ET.parse(uploaded_file)
+            root = xml_data.getroot()
+            data = []
+            for child in root:
+                data.append({subchild.tag: subchild.text for subchild in child})
+            df = pd.DataFrame(data)
+        elif input_format == "TXT":
+            df = pd.read_csv(uploaded_file, sep="\t")
 
-def main():
-    st.title('File Converter App')
-    st.write('Convert your files between different formats')
-    
-    # File upload
-    uploaded_file = st.file_uploader("Choose a file", type=['csv', 'xlsx', 'xls', 'json', 'docx', 'pdf', 'jpg', 'jpeg', 'png'])
-    
-    if uploaded_file is not None:
-        # Show original file details
-        st.subheader('Original File Details')
-        st.write(f"Filename: {uploaded_file.name}")
-        
-        # Select output format
-        output_format = st.selectbox(
-            'Select output format',
-            ['CSV', 'Excel', 'JSON', 'DOCX', 'PDF', 'JPG', 'PNG']
-        )
-        
-        # Convert button
-        if st.button('Convert File'):
-            result = convert_file(uploaded_file, output_format)
+        # Display preview
+        st.subheader("Preview of uploaded data")
+        st.dataframe(df.head())
+
+        # Convert and download
+        if st.button("Convert"):
+            st.subheader("Converted File")
             
-            if result:
-                output, mime, file_extension = result
-                
-                # Download converted file
+            if output_format == "CSV":
+                output = df.to_csv(index=False)
+                mime = "text/csv"
+                ext = "csv"
+            elif output_format == "Excel":
+                output = io.BytesIO()
+                df.to_excel(output, index=False)
+                mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ext = "xlsx"
+            elif output_format == "JSON":
+                output = df.to_json(orient="records")
+                mime = "application/json"
+                ext = "json"
+            elif output_format == "XML":
+                output = df.to_xml(index=False)
+                mime = "application/xml"
+                ext = "xml"
+            elif output_format == "TXT":
+                output = df.to_csv(sep="\t", index=False)
+                mime = "text/plain"
+                ext = "txt"
+
+            # Create download button
+            if output_format == "Excel":
+                output.seek(0)
                 st.download_button(
-                    label=f"Download converted file as {output_format}",
-                    data=output,
-                    file_name=f"converted{file_extension}",
+                    label="Download converted file",
+                    data=output.read(),
+                    file_name=f"converted.{ext}",
                     mime=mime
                 )
-                
-                st.success('File converted successfully!')
+            else:
+                st.download_button(
+                    label="Download converted file",
+                    data=output,
+                    file_name=f"converted.{ext}",
+                    mime=mime
+                )
 
-if __name__ == '__main__':
-    main()
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        st.write("Please make sure you've selected the correct input format and the file is valid.")
+
+# Add some helpful information
+st.sidebar.markdown("---")
+st.sidebar.subheader("Supported Operations")
+st.sidebar.write("• CSV ↔ Excel")
+st.sidebar.write("• JSON ↔ XML")
+st.sidebar.write("• TXT ↔ CSV")
+
+# Footer
+st.markdown("---")
+st.markdown("Made with ❤️ by DataSweeper")
