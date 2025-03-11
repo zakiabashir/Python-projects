@@ -18,9 +18,15 @@ def main():
             100% {background-position: 0% 50%;}
         }
 
+        /* Due date styling */
+        .stDateInput input {
+            background: rgba(0, 0, 0, 0) !important;
+            color: #000000 !important;
+        }
+
         /* Enhanced title styling */
         h1 {
-            background: linear-gradient(120deg, #FF69B4, #9370DB);
+            background: linear-gradient(120deg, #FF1493, #00FF00, #FFD700, #FF4500, #9400D3);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             animation: titleGlow 2s ease-in-out infinite;
