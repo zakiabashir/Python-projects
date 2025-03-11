@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import os
-from fpdf import FPDF
+from fpdf import FPDF  # Changed from fpdf2 to fpdf
 import tempfile
 
 def main():
