@@ -264,7 +264,4 @@ def main():
                         st.error(f"Error generating PDF: {str(e)}")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+    main()
