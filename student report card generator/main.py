@@ -63,12 +63,16 @@ def main():
     st.markdown("---")
     
     # Load existing students from file if it exists
-    if os.path.exists('students.json'):
-        with open('students.json', 'r') as f:
-            st.session_state.persistent_students = json.load(f)
-    else:
-        if 'persistent_students' not in st.session_state:
-            st.session_state.persistent_students = []
+    try:
+        if os.path.exists('students.json'):
+            with open('students.json', 'r') as f:
+                st.session_state.persistent_students = json.load(f)
+        else:
+            if 'persistent_students' not in st.session_state:
+                st.session_state.persistent_students = []
+    except Exception as e:
+        st.error(f"Error loading students data: {str(e)}")
+        st.session_state.persistent_students = []
 
     # Add search functionality
     st.markdown("## Search Existing Report Card")
@@ -102,34 +106,37 @@ def main():
                 st.markdown("---")
 
                 if st.button(f"Download Report Card - {found_student['name']}", key=f"search_btn_{found_student['roll_no']}"):
-                    pdf = FPDF()
-                    pdf.add_page()
-                    
-                    pdf.set_font("Arial", "B", 16)
-                    pdf.cell(190, 10, "Student Report Card", ln=True, align='C')
-                    pdf.line(10, 30, 200, 30)
-                    
-                    pdf.set_font("Arial", size=12)
-                    pdf.cell(190, 10, f"Student Name: {found_student['name']}", ln=True)
-                    pdf.cell(190, 10, f"Roll Number: {found_student['roll_no']}", ln=True)
-                    
-                    pdf.cell(190, 10, "Subject-wise Marks:", ln=True)
-                    for subject, marks in found_student['marks'].items():
-                        pdf.cell(190, 10, f"{subject}: {marks}", ln=True)
-                    
-                    pdf.cell(190, 10, f"Total Marks: {found_student['total']}/500", ln=True)
-                    pdf.cell(190, 10, f"Percentage: {found_student['percentage']:.2f}%", ln=True)
-                    pdf.cell(190, 10, f"Grade: {found_student['grade']}", ln=True)
-                    
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                        pdf.output(tmp_file.name)
-                        with open(tmp_file.name, "rb") as f:
-                            st.download_button(
-                                label="Click here to download PDF",
-                                data=f.read(),
-                                file_name=f"report_card_{found_student['name']}.pdf",
-                                mime="application/pdf"
-                            )
+                    try:
+                        pdf = FPDF()
+                        pdf.add_page()
+                        
+                        pdf.set_font("Arial", "B", 16)
+                        pdf.cell(190, 10, "Student Report Card", ln=True, align='C')
+                        pdf.line(10, 30, 200, 30)
+                        
+                        pdf.set_font("Arial", size=12)
+                        pdf.cell(190, 10, f"Student Name: {found_student['name']}", ln=True)
+                        pdf.cell(190, 10, f"Roll Number: {found_student['roll_no']}", ln=True)
+                        
+                        pdf.cell(190, 10, "Subject-wise Marks:", ln=True)
+                        for subject, marks in found_student['marks'].items():
+                            pdf.cell(190, 10, f"{subject}: {marks}", ln=True)
+                        
+                        pdf.cell(190, 10, f"Total Marks: {found_student['total']}/500", ln=True)
+                        pdf.cell(190, 10, f"Percentage: {found_student['percentage']:.2f}%", ln=True)
+                        pdf.cell(190, 10, f"Grade: {found_student['grade']}", ln=True)
+                        
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                            pdf.output(tmp_file.name)
+                            with open(tmp_file.name, "rb") as f:
+                                st.download_button(
+                                    label="Click here to download PDF",
+                                    data=f.read(),
+                                    file_name=f"report_card_{found_student['name']}.pdf",
+                                    mime="application/pdf"
+                                )
+                    except Exception as e:
+                        st.error(f"Error generating PDF: {str(e)}")
         else:
             st.error("No student found with given name or roll number!")
     
@@ -151,52 +158,55 @@ def main():
         submit_button = st.form_submit_button("Add Student")
         
         if submit_button:
-            # Validate name contains only English characters and is not empty
-            if not name or not all(c.isalpha() or c.isspace() for c in name):
-                st.error("Please enter a valid student name (English letters only)!")
-                return
+            try:
+                # Validate name contains only English characters and is not empty
+                if not name or not all(c.isalpha() or c.isspace() for c in name):
+                    st.error("Please enter a valid student name (English letters only)!")
+                    return
+                    
+                # Calculate total and percentage
+                total_marks = math + physics + urdu + english + computer
+                percentage = (total_marks / 500) * 100
                 
-            # Calculate total and percentage
-            total_marks = math + physics + urdu + english + computer
-            percentage = (total_marks / 500) * 100
-            
-            # Determine grade
-            if percentage >= 80:
-                grade = "A+"
-            elif percentage >= 70:
-                grade = "A"
-            elif percentage >= 60:
-                grade = "B"
-            elif percentage >= 50:
-                grade = "C"
-            else:
-                grade = "F"
+                # Determine grade
+                if percentage >= 80:
+                    grade = "A+"
+                elif percentage >= 70:
+                    grade = "A"
+                elif percentage >= 60:
+                    grade = "B"
+                elif percentage >= 50:
+                    grade = "C"
+                else:
+                    grade = "F"
+                    
+                # Store student data in persistent storage
+                if 'persistent_students' not in st.session_state:
+                    st.session_state.persistent_students = []
+                    
+                student = {
+                    "name": name,
+                    "roll_no": int(roll_no),
+                    "marks": {
+                        "Math": math,
+                        "Physics": physics,
+                        "Urdu": urdu,
+                        "English": english,
+                        "Computer": computer
+                    },
+                    "total": total_marks,
+                    "percentage": percentage,
+                    "grade": grade
+                }
+                st.session_state.persistent_students.append(student)
                 
-            # Store student data in persistent storage
-            if 'persistent_students' not in st.session_state:
-                st.session_state.persistent_students = []
-                
-            student = {
-                "name": name,
-                "roll_no": int(roll_no),
-                "marks": {
-                    "Math": math,
-                    "Physics": physics,
-                    "Urdu": urdu,
-                    "English": english,
-                    "Computer": computer
-                },
-                "total": total_marks,
-                "percentage": percentage,
-                "grade": grade
-            }
-            st.session_state.persistent_students.append(student)
-            
-            # Save to file
-            with open('students.json', 'w') as f:
-                json.dump(st.session_state.persistent_students, f)
-                
-            st.success(f"Record of {name} inserted successfully!")
+                # Save to file
+                with open('students.json', 'w') as f:
+                    json.dump(st.session_state.persistent_students, f)
+                    
+                st.success(f"Record of {name} inserted successfully!")
+            except Exception as e:
+                st.error(f"Error adding student: {str(e)}")
 
     # Generate report cards from persistent storage
     if 'persistent_students' in st.session_state and st.session_state.persistent_students:
@@ -219,39 +229,42 @@ def main():
 
                 # Add download PDF button
                 if st.button(f"Download Report Card - {student['name']}", key=f"btn_{student['roll_no']}"):
-                    pdf = FPDF()
-                    pdf.add_page()
-                    
-                    # Add content to PDF
-                    pdf.set_font("Arial", "B", 16)
-                    pdf.cell(190, 10, "Student Report Card", ln=True, align='C')
-                    pdf.line(10, 30, 200, 30)
-                    
-                    pdf.set_font("Arial", size=12)
-                    pdf.cell(190, 10, f"Student Name: {student['name']}", ln=True)
-                    pdf.cell(190, 10, f"Roll Number: {student['roll_no']}", ln=True)
-                    
-                    pdf.cell(190, 10, "Subject-wise Marks:", ln=True)
-                    for subject, marks in student['marks'].items():
-                        pdf.cell(190, 10, f"{subject}: {marks}", ln=True)
-                    
-                    pdf.cell(190, 10, f"Total Marks: {student['total']}/500", ln=True)
-                    pdf.cell(190, 10, f"Percentage: {student['percentage']:.2f}%", ln=True)
-                    pdf.cell(190, 10, f"Grade: {student['grade']}", ln=True)
-                    
-                    # Save PDF to temp file and create download button
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                        pdf.output(tmp_file.name)
-                        with open(tmp_file.name, "rb") as f:
-                            st.download_button(
-                                label="Click here to download PDF",
-                                data=f.read(),
-                                file_name=f"report_card_{student['name']}.pdf",
-                                mime="application/pdf"
-                            )
+                    try:
+                        pdf = FPDF()
+                        pdf.add_page()
+                        
+                        # Add content to PDF
+                        pdf.set_font("Arial", "B", 16)
+                        pdf.cell(190, 10, "Student Report Card", ln=True, align='C')
+                        pdf.line(10, 30, 200, 30)
+                        
+                        pdf.set_font("Arial", size=12)
+                        pdf.cell(190, 10, f"Student Name: {student['name']}", ln=True)
+                        pdf.cell(190, 10, f"Roll Number: {student['roll_no']}", ln=True)
+                        
+                        pdf.cell(190, 10, "Subject-wise Marks:", ln=True)
+                        for subject, marks in student['marks'].items():
+                            pdf.cell(190, 10, f"{subject}: {marks}", ln=True)
+                        
+                        pdf.cell(190, 10, f"Total Marks: {student['total']}/500", ln=True)
+                        pdf.cell(190, 10, f"Percentage: {student['percentage']:.2f}%", ln=True)
+                        pdf.cell(190, 10, f"Grade: {student['grade']}", ln=True)
+                        
+                        # Save PDF to temp file and create download button
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                            pdf.output(tmp_file.name)
+                            with open(tmp_file.name, "rb") as f:
+                                st.download_button(
+                                    label="Click here to download PDF",
+                                    data=f.read(),
+                                    file_name=f"report_card_{student['name']}.pdf",
+                                    mime="application/pdf"
+                                )
+                    except Exception as e:
+                        st.error(f"Error generating PDF: {str(e)}")
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"An error occurred: {str(e)}")
