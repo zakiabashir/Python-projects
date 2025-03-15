@@ -106,7 +106,7 @@ def main():
                 st.write(f"**Grade:** {found_student['grade']}")
                 st.markdown("---")
 
-                if st.button(f"Download Report Card - {found_student['name']}", key=f"search_btn_{found_student['roll_no']}"):
+                if st.button(f"Download Report Card - {found_student['name']}", key=f"search_download_{found_student['roll_no']}"):
                     try:
                         pdf = FPDF()
                         pdf.add_page()
@@ -134,7 +134,8 @@ def main():
                                     label="Click here to download PDF",
                                     data=f.read(),
                                     file_name=f"report_card_{found_student['name']}.pdf",
-                                    mime="application/pdf"
+                                    mime="application/pdf",
+                                    key=f"search_pdf_{found_student['roll_no']}"
                                 )
                     except Exception as e:
                         st.error(f"Error generating PDF: {str(e)}")
@@ -214,7 +215,7 @@ def main():
                 
                 # Reset form by incrementing form key
                 st.session_state.form_key += 1
-                st.experimental_rerun()
+                st.rerun()  # Changed from experimental_rerun() to rerun()
                 
             except Exception as e:
                 st.error(f"Error adding student: {str(e)}")
@@ -237,8 +238,9 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Button to show detailed result
-                if st.button(f"View Details", key=f"grid_btn_{student['roll_no']}"):
+                # Button to show detailed result with unique key
+                unique_key = f"grid_btn_{student['roll_no']}_{idx}"
+                if st.button(f"View Details", key=unique_key):
                     st.session_state.selected_student = student
         
         # Show detailed result if a student is selected
@@ -255,8 +257,9 @@ def main():
                 st.write(f"**Percentage:** {st.session_state.selected_student['percentage']:.2f}%")
                 st.write(f"**Grade:** {st.session_state.selected_student['grade']}")
 
-                # Add download PDF button
-                if st.button(f"Download Report Card", key=f"download_btn_{st.session_state.selected_student['roll_no']}"):
+                # Add download PDF button with unique key
+                unique_download_key = f"download_btn_{st.session_state.selected_student['roll_no']}_{int(st.session_state.selected_student['percentage'])}"
+                if st.button(f"Download Report Card", key=unique_download_key):
                     try:
                         pdf = FPDF()
                         pdf.add_page()
@@ -278,7 +281,7 @@ def main():
                         pdf.cell(190, 10, f"Percentage: {st.session_state.selected_student['percentage']:.2f}%", ln=True)
                         pdf.cell(190, 10, f"Grade: {st.session_state.selected_student['grade']}", ln=True)
                         
-                        # Save PDF to temp file and create download button
+                        # Save PDF to temp file and create download button with unique key
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                             pdf.output(tmp_file.name)
                             with open(tmp_file.name, "rb") as f:
@@ -286,7 +289,8 @@ def main():
                                     label="Click here to download PDF",
                                     data=f.read(),
                                     file_name=f"report_card_{st.session_state.selected_student['name']}.pdf",
-                                    mime="application/pdf"
+                                    mime="application/pdf",
+                                    key=f"pdf_download_{st.session_state.selected_student['roll_no']}_{int(st.session_state.selected_student['percentage'])}"
                                 )
                     except Exception as e:
                         st.error(f"Error generating PDF: {str(e)}")
