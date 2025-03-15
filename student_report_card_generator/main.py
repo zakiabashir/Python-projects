@@ -1,11 +1,18 @@
-import streamlit as st
-import json
-import os
-from fpdf import FPDF  # Changed from fpdf2 to fpdf
-import tempfile
+# Import required libraries
+import streamlit as st  # For creating web interface
+import json  # For handling JSON data storage
+import os  # For file operations
+from fpdf import FPDF  # For generating PDF reports
+import tempfile  # For creating temporary files
 
 def main():
-    # Add custom CSS for background gradient and title animation
+    """
+    Main function that runs the entire student report card application.
+    Contains all the core functionality and UI components.
+    """
+
+    # Add custom CSS styling for better visual appearance
+    # Creates gradient background animation and title animation effects
     st.markdown(
         """
         <style>
@@ -39,13 +46,15 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Initialize session state for students list if it doesn't exist
+    # Initialize empty students list in session state if not already present
+    # Session state persists data between reruns
     if 'students' not in st.session_state:
         st.session_state.students = []
 
+    # Display the main title of the app with animation effect
     st.markdown("<h1 class='title-animation'>Student Report Card Generator App</h1>", unsafe_allow_html=True)
     
-    # Add app description and creator info
+    # Display app description and developer information
     st.markdown("""
     #### About this App
     This is a comprehensive Student Report Card Management System that allows you to:
@@ -63,7 +72,8 @@ def main():
     
     st.markdown("---")
     
-    # Load existing students from file if it exists
+    # Load existing student data from JSON file
+    # Try-except block handles any errors during file operations
     try:
         if os.path.exists('students.json'):
             with open('students.json', 'r') as f:
@@ -75,7 +85,7 @@ def main():
         st.error(f"Error loading students data: {str(e)}")
         st.session_state.persistent_students = []
 
-    # Add search functionality
+    # Search section - allows searching students by name or roll number
     st.markdown("## Search Existing Report Card")
     search_col1, search_col2 = st.columns(2)
     with search_col1:
@@ -83,6 +93,7 @@ def main():
     with search_col2:    
         search_roll = st.number_input("Search by Roll Number", min_value=0)
     
+    # Search logic - finds matching student based on name or roll number
     if search_name or search_roll > 0:
         found_student = None
         for student in st.session_state.persistent_students:
@@ -92,7 +103,19 @@ def main():
                 break
                 
         if found_student:
+            # Check for duplicate roll numbers to prevent conflicts
+            roll_exists = False
+            for student in st.session_state.persistent_students:
+                if student['roll_no'] == found_student['roll_no'] and student != found_student:
+                    roll_exists = True
+                    break
+                    
+            if roll_exists:
+                st.error("This roll number already exists. Cannot generate report card.")
+                return
+                
             st.success("Student Found!")
+            # Display found student's report card in expandable section
             with st.expander(f"Report Card - {found_student['name']}", expanded=True):
                 st.write(f"**Student Name:** {found_student['name']}")
                 st.write(f"**Roll Number:** {found_student['roll_no']}")
@@ -106,8 +129,10 @@ def main():
                 st.write(f"**Grade:** {found_student['grade']}")
                 st.markdown("---")
 
+                # PDF generation functionality for searched student
                 if st.button(f"Download Report Card - {found_student['name']}", key=f"search_download_{found_student['roll_no']}"):
                     try:
+                        # Create PDF with student details and formatting
                         pdf = FPDF()
                         pdf.add_page()
                         
@@ -127,6 +152,7 @@ def main():
                         pdf.cell(190, 10, f"Percentage: {found_student['percentage']:.2f}%", ln=True)
                         pdf.cell(190, 10, f"Grade: {found_student['grade']}", ln=True)
                         
+                        # Save PDF to temporary file and create download button
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                             pdf.output(tmp_file.name)
                             with open(tmp_file.name, "rb") as f:
@@ -145,17 +171,17 @@ def main():
     st.markdown("---")
     st.markdown("## Add New Student")
     
-    # Initialize form key in session state if not exists
+    # Form key for resetting form after submission
     if 'form_key' not in st.session_state:
         st.session_state.form_key = 0
     
-    # Form with unique key to allow resetting
+    # Form for adding new student details
     with st.form(f"student_form_{st.session_state.form_key}"):
-        # Get student details
+        # Input fields for student information
         name = st.text_input("Enter Student Name",placeholder="Enter student Name")
         roll_no = st.number_input("Enter Roll Number", min_value=1, placeholder="Enter student Roll number")
         
-        # Get subject marks
+        # Input fields for subject marks
         math = st.number_input("Enter Math marks", min_value=0, max_value=100)
         physics = st.number_input("Enter Physics marks", min_value=0, max_value=100)
         urdu = st.number_input("Enter Urdu marks", min_value=0, max_value=100)
@@ -164,18 +190,25 @@ def main():
         
         submit_button = st.form_submit_button("Add Student")
         
+        # Handle form submission
         if submit_button:
             try:
-                # Validate name contains only English characters and is not empty
+                # Validate student name contains only letters and spaces
                 if not name or not all(c.isalpha() or c.isspace() for c in name):
                     st.error("Please enter a valid student name (English letters only)!")
                     return
+
+                # Check if roll number already exists
+                for existing_student in st.session_state.persistent_students:
+                    if existing_student['roll_no'] == int(roll_no):
+                        st.warning(f"Roll number {roll_no} already exists. Please use a different roll number.")
+                        return
                     
-                # Calculate total and percentage
+                # Calculate total marks and percentage
                 total_marks = math + physics + urdu + english + computer
                 percentage = (total_marks / 500) * 100
                 
-                # Determine grade
+                # Determine grade based on percentage ranges
                 if percentage >= 80:
                     grade = "A+"
                 elif percentage >= 70:
@@ -187,10 +220,11 @@ def main():
                 else:
                     grade = "F"
                     
-                # Store student data in persistent storage
+                # Initialize storage if not exists
                 if 'persistent_students' not in st.session_state:
                     st.session_state.persistent_students = []
                     
+                # Create student record dictionary
                 student = {
                     "name": name,
                     "roll_no": int(roll_no),
@@ -205,9 +239,11 @@ def main():
                     "percentage": percentage,
                     "grade": grade
                 }
+                
+                # Add student to session state storage
                 st.session_state.persistent_students.append(student)
                 
-                # Save to file
+                # Save updated records to JSON file
                 with open('students.json', 'w') as f:
                     json.dump(st.session_state.persistent_students, f)
                     
@@ -215,21 +251,22 @@ def main():
                 
                 # Reset form by incrementing form key
                 st.session_state.form_key += 1
-                st.rerun()  # Changed from experimental_rerun() to rerun()
+                st.rerun()
                 
             except Exception as e:
                 st.error(f"Error adding student: {str(e)}")
 
-    # Show students in grid view
+    # Display grid view of all students
     if 'persistent_students' in st.session_state and st.session_state.persistent_students:
         st.markdown("## Students Overview")
         
-        # Create 3 columns for grid layout
+        # Create 3-column layout for grid display
         cols = st.columns(3)
         
+        # Display each student as a card in grid
         for idx, student in enumerate(st.session_state.persistent_students):
             with cols[idx % 3]:
-                # Card-like display for each student
+                # Card with student basic info
                 st.markdown(f"""
                 <div style='padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin: 5px;'>
                     <h4>{student['name']}</h4>
@@ -238,12 +275,12 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Button to show detailed result with unique key
+                # Button to view detailed student info
                 unique_key = f"grid_btn_{student['roll_no']}_{idx}"
                 if st.button(f"View Details", key=unique_key):
                     st.session_state.selected_student = student
         
-        # Show detailed result if a student is selected
+        # Show detailed view of selected student
         if 'selected_student' in st.session_state:
             with st.expander(f"Detailed Report Card - {st.session_state.selected_student['name']}", expanded=True):
                 st.write(f"**Student Name:** {st.session_state.selected_student['name']}")
@@ -257,14 +294,15 @@ def main():
                 st.write(f"**Percentage:** {st.session_state.selected_student['percentage']:.2f}%")
                 st.write(f"**Grade:** {st.session_state.selected_student['grade']}")
 
-                # Add download PDF button with unique key
+                # PDF download functionality for selected student
                 unique_download_key = f"download_btn_{st.session_state.selected_student['roll_no']}_{int(st.session_state.selected_student['percentage'])}"
                 if st.button(f"Download Report Card", key=unique_download_key):
                     try:
+                        # Create PDF with student details
                         pdf = FPDF()
                         pdf.add_page()
                         
-                        # Add content to PDF
+                        # Add formatted content to PDF
                         pdf.set_font("Arial", "B", 16)
                         pdf.cell(190, 10, "Student Report Card", ln=True, align='C')
                         pdf.line(10, 30, 200, 30)
@@ -281,7 +319,7 @@ def main():
                         pdf.cell(190, 10, f"Percentage: {st.session_state.selected_student['percentage']:.2f}%", ln=True)
                         pdf.cell(190, 10, f"Grade: {st.session_state.selected_student['grade']}", ln=True)
                         
-                        # Save PDF to temp file and create download button with unique key
+                        # Save PDF and create download button
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                             pdf.output(tmp_file.name)
                             with open(tmp_file.name, "rb") as f:
@@ -295,5 +333,6 @@ def main():
                     except Exception as e:
                         st.error(f"Error generating PDF: {str(e)}")
 
+# Entry point of the application
 if __name__ == "__main__":
     main()
