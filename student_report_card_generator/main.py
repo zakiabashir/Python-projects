@@ -56,6 +56,7 @@ def main():
     - Store all records persistently
     
     #### Created By
+    
     **Developer:** Zakia Bashir  
     **Contact:** nshafeys0@gmail.com
     """)
@@ -143,7 +144,12 @@ def main():
     st.markdown("---")
     st.markdown("## Add New Student")
     
-    with st.form("student_form"):
+    # Initialize form key in session state if not exists
+    if 'form_key' not in st.session_state:
+        st.session_state.form_key = 0
+    
+    # Form with unique key to allow resetting
+    with st.form(f"student_form_{st.session_state.form_key}"):
         # Get student details
         name = st.text_input("Enter Student Name",placeholder="Enter student Name")
         roll_no = st.number_input("Enter Roll Number", min_value=1, placeholder="Enter student Roll number")
@@ -205,30 +211,52 @@ def main():
                     json.dump(st.session_state.persistent_students, f)
                     
                 st.success(f"Record of {name} inserted successfully!")
+                
+                # Reset form by incrementing form key
+                st.session_state.form_key += 1
+                st.experimental_rerun()
+                
             except Exception as e:
                 st.error(f"Error adding student: {str(e)}")
 
-    # Generate report cards from persistent storage
+    # Show students in grid view
     if 'persistent_students' in st.session_state and st.session_state.persistent_students:
-        st.markdown("## All Student Report Cards")
-        st.markdown("---")
+        st.markdown("## Students Overview")
         
-        for student in st.session_state.persistent_students:
-            with st.expander(f"Report Card - {student['name']}"):
-                st.write(f"**Student Name:** {student['name']}")
-                st.write(f"**Roll Number:** {student['roll_no']}")
+        # Create 3 columns for grid layout
+        cols = st.columns(3)
+        
+        for idx, student in enumerate(st.session_state.persistent_students):
+            with cols[idx % 3]:
+                # Card-like display for each student
+                st.markdown(f"""
+                <div style='padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin: 5px;'>
+                    <h4>{student['name']}</h4>
+                    <p>Roll No: {student['roll_no']}</p>
+                    <p>Grade: {student['grade']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Button to show detailed result
+                if st.button(f"View Details", key=f"grid_btn_{student['roll_no']}"):
+                    st.session_state.selected_student = student
+        
+        # Show detailed result if a student is selected
+        if 'selected_student' in st.session_state:
+            with st.expander(f"Detailed Report Card - {st.session_state.selected_student['name']}", expanded=True):
+                st.write(f"**Student Name:** {st.session_state.selected_student['name']}")
+                st.write(f"**Roll Number:** {st.session_state.selected_student['roll_no']}")
                 
                 st.write("\n**Subject-wise Marks:**")
-                for subject, marks in student['marks'].items():
+                for subject, marks in st.session_state.selected_student['marks'].items():
                     st.write(f"{subject}: {marks}")
                 
-                st.write(f"**Total Marks:** {student['total']}/500")
-                st.write(f"**Percentage:** {student['percentage']:.2f}%")
-                st.write(f"**Grade:** {student['grade']}")
-                st.markdown("---")
+                st.write(f"**Total Marks:** {st.session_state.selected_student['total']}/500")
+                st.write(f"**Percentage:** {st.session_state.selected_student['percentage']:.2f}%")
+                st.write(f"**Grade:** {st.session_state.selected_student['grade']}")
 
                 # Add download PDF button
-                if st.button(f"Download Report Card - {student['name']}", key=f"btn_{student['roll_no']}"):
+                if st.button(f"Download Report Card", key=f"download_btn_{st.session_state.selected_student['roll_no']}"):
                     try:
                         pdf = FPDF()
                         pdf.add_page()
@@ -239,16 +267,16 @@ def main():
                         pdf.line(10, 30, 200, 30)
                         
                         pdf.set_font("Arial", size=12)
-                        pdf.cell(190, 10, f"Student Name: {student['name']}", ln=True)
-                        pdf.cell(190, 10, f"Roll Number: {student['roll_no']}", ln=True)
+                        pdf.cell(190, 10, f"Student Name: {st.session_state.selected_student['name']}", ln=True)
+                        pdf.cell(190, 10, f"Roll Number: {st.session_state.selected_student['roll_no']}", ln=True)
                         
                         pdf.cell(190, 10, "Subject-wise Marks:", ln=True)
-                        for subject, marks in student['marks'].items():
+                        for subject, marks in st.session_state.selected_student['marks'].items():
                             pdf.cell(190, 10, f"{subject}: {marks}", ln=True)
                         
-                        pdf.cell(190, 10, f"Total Marks: {student['total']}/500", ln=True)
-                        pdf.cell(190, 10, f"Percentage: {student['percentage']:.2f}%", ln=True)
-                        pdf.cell(190, 10, f"Grade: {student['grade']}", ln=True)
+                        pdf.cell(190, 10, f"Total Marks: {st.session_state.selected_student['total']}/500", ln=True)
+                        pdf.cell(190, 10, f"Percentage: {st.session_state.selected_student['percentage']:.2f}%", ln=True)
+                        pdf.cell(190, 10, f"Grade: {st.session_state.selected_student['grade']}", ln=True)
                         
                         # Save PDF to temp file and create download button
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
@@ -257,7 +285,7 @@ def main():
                                 st.download_button(
                                     label="Click here to download PDF",
                                     data=f.read(),
-                                    file_name=f"report_card_{student['name']}.pdf",
+                                    file_name=f"report_card_{st.session_state.selected_student['name']}.pdf",
                                     mime="application/pdf"
                                 )
                     except Exception as e:
