@@ -1,0 +1,12 @@
+[project]
+name = "qr-code-encoder-decoder"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pyzbar>=0.1.9",
+    "qrcode>=8.1",
+    "rcode>=0.7.0",
+    "streamlit>=1.44.1",
+]
