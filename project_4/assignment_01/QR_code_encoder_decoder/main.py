@@ -4,8 +4,8 @@ def main():
     import qrcode
     from PIL import Image
     import numpy as np
-    from pyzbar.pyzbar import decode
     import io
+    import cv2  # Using OpenCV instead of pyzbar
     
     # Set page configuration and title
     st.set_page_config(page_title="QR Code Generator/Decoder", layout="wide")
@@ -61,7 +61,7 @@ def main():
                     img_byte_arr = img_byte_arr.getvalue()
                     
                     # Display the generated QR code
-                    st.image(img_byte_arr, caption="Generated QR Code", use_column_width=False)
+                    st.image(img_byte_arr, caption="Generated QR Code", use_container_width=False)
                     
                     # Add download button
                     st.download_button(
@@ -83,19 +83,20 @@ def main():
         if uploaded_file is not None:
             try:
                 # Convert uploaded file to image
-                image = Image.open(uploaded_file)
-                # Convert PIL image to numpy array
-                img_array = np.array(image)
+                file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+                image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
                 
-                # Decode QR code
-                decoded_objects = decode(img_array)
+                # Initialize QR code detector
+                qr_detector = cv2.QRCodeDetector()
                 
-                if len(decoded_objects) > 0:
+                # Detect and decode QR code
+                data, bbox, _ = qr_detector.detectAndDecode(image)
+                
+                if data:
                     # Display decoded text
-                    for obj in decoded_objects:
-                        st.success(f"Decoded Content: {obj.data.decode('utf-8')}")
+                    st.success(f"Decoded Content: {data}")
                     # Display uploaded image
-                    st.image(image, caption="Uploaded QR Code", use_column_width=False)
+                    st.image(uploaded_file, caption="Uploaded QR Code", use_container_width=False)
                 else:
                     st.error("No QR Code found in the image")
             except Exception as e:
