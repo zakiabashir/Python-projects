@@ -287,7 +287,7 @@ if 'current_question_index' not in st.session_state:
 if 'score' not in st.session_state:
     st.session_state.score = 0
 if 'start_time' not in st.session_state:
-    st.session_state.start_time = time.time()
+    st.session_state.start_time = None
 if 'quiz_started' not in st.session_state:
     st.session_state.quiz_started = False
 if 'quiz_completed' not in st.session_state:
@@ -299,7 +299,7 @@ if 'show_results' not in st.session_state:
 if 'show_admin_panel' not in st.session_state:
     st.session_state.show_admin_panel = False
 if 'user_answers' not in st.session_state:
-    st.session_state.user_answers = {}  # Store user's answers for each question
+    st.session_state.user_answers = {}
 
 # --- Login/Registration Section ---
 if not st.session_state.logged_in:
@@ -413,17 +413,17 @@ if st.session_state.logged_in:
                     </div>
                     """, unsafe_allow_html=True)
             
-                # Show all questions with correct answers only for user's own result
-                st.subheader("📝 Complete Quiz Questions")
-                for i, question in enumerate(QUESTIONS):  # Use the global QUESTIONS list
-                    with st.container():
-                        st.markdown(f"""
-                        <div class="result-box" style="margin-bottom: 20px;">
-                            <h4>Question {i+1}: {question['question']}</h4>
-                            <p><strong>Correct Answer:</strong> {question['answer']}</p>
-                            <p><strong>All Options:</strong> {', '.join(question['options'])}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+            # Show all questions with correct answers only for user's own result
+            st.subheader("📝 Complete Quiz Questions")
+            for i, question in enumerate(QUESTIONS):  # Use the global QUESTIONS list
+                with st.container():
+                    st.markdown(f"""
+                    <div class="result-box" style="margin-bottom: 20px;">
+                        <h4>Question {i+1}: {question['question']}</h4>
+                        <p><strong>Correct Answer:</strong> {question['answer']}</p>
+                        <p><strong>All Options:</strong> {', '.join(question['options'])}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
             
             if st.button("Logout", key="logout_after_attempt"):
                 st.session_state.logged_in = False
@@ -435,148 +435,158 @@ if st.session_state.logged_in:
             # Regular quiz interface for normal users
             st.write(f"Welcome, {st.session_state.username}!")
 
-            # Define the time limit in seconds
-            time_limit = 7200  # 120 minutes in seconds
+            # Show Start Quiz button if quiz hasn't started
+            if not st.session_state.quiz_started and not st.session_state.quiz_completed:
+                if st.button("Start Quiz", key="start_quiz_button", use_container_width=True):
+                    st.session_state.quiz_started = True
+                    st.session_state.start_time = time.time()
+                    st.rerun()
 
-            # Create a placeholder for the timer
-            timer_placeholder = st.empty()
+            # Only show quiz content if quiz has been started
+            if st.session_state.quiz_started and not st.session_state.quiz_completed:
+                # Define the time limit in seconds
+                time_limit = 7200  # 120 minutes in seconds
 
-            # Use the global QUESTIONS list
-            questions = QUESTIONS
+                # Create a placeholder for the timer
+                timer_placeholder = st.empty()
 
-            # Check if quiz is completed
-            if st.session_state.quiz_completed:
-                time_taken = time.time() - st.session_state.start_time
-                
-                # Create a container for completion result
-                with st.container():
-                    st.markdown(f"""
-                    <div class="result-box user-result-box">
-                        <h3>🎉 Quiz Completed! 🎉</h3>
-                        <p><strong>Username:</strong> {st.session_state.username}</p>
-                        <p class="score">Final Score: {st.session_state.score} out of {len(questions)}</p>
-                        <p class="time">Time taken: {format_time(time_taken)}</p>
-                        <p class="date">Completion Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                # Use the global QUESTIONS list
+                questions = QUESTIONS
 
-                # Show all questions with answers
-                st.subheader("📝 Complete Quiz Summary")
-                for i, question in enumerate(questions):
-                    user_answer = st.session_state.user_answers.get(i, "Skipped")
+                # Check if quiz is completed
+                if st.session_state.quiz_completed:
+                    time_taken = time.time() - st.session_state.start_time
                     
-                    # Create a container for each question
+                    # Create a container for completion result
                     with st.container():
                         st.markdown(f"""
-                        <div class="result-box" style="margin-bottom: 20px;">
-                            <h4>Question {i+1}: {question['question']}</h4>
-                            <p><strong>Your Answer:</strong> {user_answer}</p>
-                            <p><strong>Correct Answer:</strong> {question['answer']}</p>
-                            <p><strong>Options:</strong> {', '.join(question['options'])}</p>
+                        <div class="result-box user-result-box">
+                            <h3>🎉 Quiz Completed! 🎉</h3>
+                            <p><strong>Username:</strong> {st.session_state.username}</p>
+                            <p class="score">Final Score: {st.session_state.score} out of {len(questions)}</p>
+                            <p class="time">Time taken: {format_time(time_taken)}</p>
+                            <p class="date">Completion Time: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
                         </div>
                         """, unsafe_allow_html=True)
 
-                # Save the result
-                if save_quiz_result(
-                    st.session_state.username,
-                    st.session_state.score,
-                    len(questions),
-                    time_taken,
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                ):
-                    st.success("Your result has been saved!")
-                else:
-                    st.error("You have already attempted the quiz!")
+                    # Show all questions with answers
+                    st.subheader("📝 Complete Quiz Summary")
+                    for i, question in enumerate(questions):
+                        user_answer = st.session_state.user_answers.get(i, "Skipped")
+                        
+                        # Create a container for each question
+                        with st.container():
+                            st.markdown(f"""
+                            <div class="result-box" style="margin-bottom: 20px;">
+                                <h4>Question {i+1}: {question['question']}</h4>
+                                <p><strong>Your Answer:</strong> {user_answer}</p>
+                                <p><strong>Correct Answer:</strong> {question['answer']}</p>
+                                <p><strong>Options:</strong> {', '.join(question['options'])}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
 
-                if st.button("Logout", key="logout_button"):
-                    st.session_state.logged_in = False
-                    st.session_state.quiz_completed = False
-                    st.session_state.current_question_index = 0
-                    st.session_state.score = 0
-                    st.session_state.user_answers = {}
-                    st.rerun()
-            else:
-                # --- Timer ---
-                elapsed_time = time.time() - st.session_state.start_time
-                time_left = max(0, time_limit - elapsed_time)
-                
-                # Update timer display
-                minutes, seconds = divmod(int(time_left), 60)
-                timer_placeholder.write(f"⏱️ Time left: {minutes:02d}:{seconds:02d}")
-
-                # Check if time is up
-                if time_left <= 0:
-                    time_taken = time_limit  # If time's up, use the full time limit
-                    st.write("⏰ Time's up!")
-                    st.write(f"Your final score is: {st.session_state.score} out of {len(questions)}")
-                    st.write(f"Time taken: {format_time(time_taken)}")
-                    
                     # Save the result
-                    save_quiz_result(
+                    if save_quiz_result(
                         st.session_state.username,
                         st.session_state.score,
                         len(questions),
                         time_taken,
                         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    )
-                    
-                    st.session_state.quiz_completed = True
-                    st.rerun()
-                else:
-                    # --- Question Display and Interaction ---
-                    if st.session_state.current_question_index < len(questions):
-                        current_question = questions[st.session_state.current_question_index]
+                    ):
+                        st.success("Your result has been saved!")
+                    else:
+                        st.error("You have already attempted the quiz!")
 
-                        st.subheader(f"Question {st.session_state.current_question_index + 1} of {len(questions)}: {current_question['question']}")
-
-                        user_answer = st.radio("Choose your answer:", current_question['options'], key=f"q{st.session_state.current_question_index}")
-
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            if st.button("Submit Answer", key=f"submit_{st.session_state.current_question_index}"):
-                                # Store user's answer
-                                st.session_state.user_answers[st.session_state.current_question_index] = user_answer
-                                
-                                if user_answer == current_question['answer']:
-                                    st.session_state.score += 1
-                                
-                                st.session_state.current_question_index += 1
-                                
-                                # Check if all questions are completed
-                                if st.session_state.current_question_index >= len(questions):
-                                    time_taken = time.time() - st.session_state.start_time
-                                    # Save the result
-                                    save_quiz_result(
-                                        st.session_state.username,
-                                        st.session_state.score,
-                                        len(questions),
-                                        time_taken,
-                                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                    )
-                                    st.session_state.quiz_completed = True
-                                st.rerun()
-
-                        with col2:
-                            if st.button("Skip Question", key=f"skip_{st.session_state.current_question_index}"):
-                                # Store skipped answer
-                                st.session_state.user_answers[st.session_state.current_question_index] = "Skipped"
-                                st.session_state.current_question_index += 1
-                                
-                                # Check if all questions are completed
-                                if st.session_state.current_question_index >= len(questions):
-                                    time_taken = time.time() - st.session_state.start_time
-                                    # Save the result
-                                    save_quiz_result(
-                                        st.session_state.username,
-                                        st.session_state.score,
-                                        len(questions),
-                                        time_taken,
-                                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                    )
-                                    st.session_state.quiz_completed = True
-                                st.rerun()
-
-                    # Add auto-refresh for timer only if quiz is not completed
-                    if not st.session_state.quiz_completed:
-                        time.sleep(1)
+                    if st.button("Logout", key="logout_button"):
+                        st.session_state.logged_in = False
+                        st.session_state.quiz_completed = False
+                        st.session_state.quiz_started = False
+                        st.session_state.current_question_index = 0
+                        st.session_state.score = 0
+                        st.session_state.user_answers = {}
                         st.rerun()
+                else:
+                    # --- Timer ---
+                    elapsed_time = time.time() - st.session_state.start_time
+                    time_left = max(0, time_limit - elapsed_time)
+                    
+                    # Update timer display
+                    minutes, seconds = divmod(int(time_left), 60)
+                    timer_placeholder.write(f"⏱️ Time left: {minutes:02d}:{seconds:02d}")
+
+                    # Check if time is up
+                    if time_left <= 0:
+                        time_taken = time_limit  # If time's up, use the full time limit
+                        st.write("⏰ Time's up!")
+                        st.write(f"Your final score is: {st.session_state.score} out of {len(questions)}")
+                        st.write(f"Time taken: {format_time(time_taken)}")
+                        
+                        # Save the result
+                        save_quiz_result(
+                            st.session_state.username,
+                            st.session_state.score,
+                            len(questions),
+                            time_taken,
+                            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        )
+                        
+                        st.session_state.quiz_completed = True
+                        st.rerun()
+                    else:
+                        # --- Question Display and Interaction ---
+                        if st.session_state.current_question_index < len(questions):
+                            current_question = questions[st.session_state.current_question_index]
+
+                            st.subheader(f"Question {st.session_state.current_question_index + 1} of {len(questions)}: {current_question['question']}")
+
+                            user_answer = st.radio("Choose your answer:", current_question['options'], key=f"q{st.session_state.current_question_index}")
+
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("Submit Answer", key=f"submit_{st.session_state.current_question_index}"):
+                                    # Store user's answer
+                                    st.session_state.user_answers[st.session_state.current_question_index] = user_answer
+                                    
+                                    if user_answer == current_question['answer']:
+                                        st.session_state.score += 1
+                                    
+                                    st.session_state.current_question_index += 1
+                                    
+                                    # Check if all questions are completed
+                                    if st.session_state.current_question_index >= len(questions):
+                                        time_taken = time.time() - st.session_state.start_time
+                                        # Save the result
+                                        save_quiz_result(
+                                            st.session_state.username,
+                                            st.session_state.score,
+                                            len(questions),
+                                            time_taken,
+                                            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                        )
+                                        st.session_state.quiz_completed = True
+                                    st.rerun()
+
+                            with col2:
+                                if st.button("Skip Question", key=f"skip_{st.session_state.current_question_index}"):
+                                    # Store skipped answer
+                                    st.session_state.user_answers[st.session_state.current_question_index] = "Skipped"
+                                    st.session_state.current_question_index += 1
+                                    
+                                    # Check if all questions are completed
+                                    if st.session_state.current_question_index >= len(questions):
+                                        time_taken = time.time() - st.session_state.start_time
+                                        # Save the result
+                                        save_quiz_result(
+                                            st.session_state.username,
+                                            st.session_state.score,
+                                            len(questions),
+                                            time_taken,
+                                            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                        )
+                                        st.session_state.quiz_completed = True
+                                    st.rerun()
+
+                        # Add auto-refresh for timer only if quiz is not completed
+                        if not st.session_state.quiz_completed:
+                            time.sleep(1)
+                            st.rerun()
