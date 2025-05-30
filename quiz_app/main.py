@@ -4,6 +4,148 @@ import json
 import os
 from datetime import datetime
 
+# Add custom CSS for animated background
+st.markdown("""
+<style>
+    @keyframes gradient {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+    .stApp {
+        background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+    }
+
+    /* Make content more readable on animated background */
+    .stApp > header {
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .main > div {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Style for buttons */
+    .stButton > button {
+        background-color: rgba(255, 255, 255, 0.9);
+        color: #333;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .stButton > button:hover {
+        background-color: rgba(255, 255, 255, 1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Style for input fields */
+    .stTextInput > div > div > input {
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Style for radio buttons */
+    .stRadio > div {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 1rem;
+        border-radius: 5px;
+    }
+
+    /* Style for success/error messages */
+    .stSuccess, .stError {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 1rem;
+        border-radius: 5px;
+    }
+
+    /* Style for tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 5px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: 5px;
+        padding: 0.5rem 1rem;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Custom styles for result boxes */
+    .result-box {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 15px 0;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: transform 0.3s ease;
+    }
+
+    .result-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .result-box h3 {
+        color: #2c3e50;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+    }
+
+    .result-box p {
+        margin: 10px 0;
+        color: #34495e;
+        font-size: 1.1em;
+    }
+
+    .result-box .score {
+        font-size: 1.3em;
+        color: #2980b9;
+        font-weight: bold;
+    }
+
+    .result-box .time {
+        color: #27ae60;
+    }
+
+    .result-box .date {
+        color: #7f8c8d;
+        font-style: italic;
+    }
+
+    /* Style for admin panel results */
+    .admin-result-box {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 240, 255, 0.95));
+        border-left: 5px solid #3498db;
+    }
+
+    /* Style for user's own result */
+    .user-result-box {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 240, 240, 0.95));
+        border-left: 5px solid #e74c3c;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Function to load users from JSON file
 def load_users():
     if os.path.exists('users.json'):
@@ -171,17 +313,18 @@ if st.session_state.logged_in:
         
         if results:
             for username, user_results in results.items():
-                # Skip showing admin's own results
-                if username == "admin":
-                    continue
-                    
                 if user_results:  # Check if user has any results
-                    st.write(f"### User: {username}")
                     result = user_results[0]  # Get the first (and only) attempt
-                    st.write(f"Date: {result['date']}")
-                    st.write(f"Score: {result['score']} out of {result['total_questions']}")
-                    st.write(f"Time taken: {format_time(result['time_taken'])}")
-                    st.write("---")
+                    # Create a container for each result
+                    with st.container():
+                        st.markdown(f"""
+                        <div class="result-box admin-result-box">
+                            <h3>User: {username}</h3>
+                            <p class="date">Date: {result['date']}</p>
+                            <p class="score">Score: {result['score']} out of {result['total_questions']}</p>
+                            <p class="time">Time taken: {format_time(result['time_taken'])}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
             
             # Check if there are any results other than admin's
             has_other_results = any(username != "admin" for username in results.keys())
@@ -193,17 +336,25 @@ if st.session_state.logged_in:
         if st.button("Back to Admin Dashboard", key="back_from_admin"):
             st.session_state.show_admin_panel = False
             st.rerun()
-    else:
+    
+    # Regular user quiz interface
+    elif st.session_state.username != "admin":  # Only show quiz for non-admin users
         # Check if user has already attempted the quiz
         if has_attempted_quiz(st.session_state.username):
             st.write("You have already attempted the quiz.")
             results = load_quiz_results()
             if st.session_state.username in results:
                 result = results[st.session_state.username][0]
-                st.write("Your Result:")
-                st.write(f"Date: {result['date']}")
-                st.write(f"Score: {result['score']} out of {result['total_questions']}")
-                st.write(f"Time taken: {format_time(result['time_taken'])}")
+                # Create a container for user's result
+                with st.container():
+                    st.markdown(f"""
+                    <div class="result-box user-result-box">
+                        <h3>Your Quiz Result</h3>
+                        <p class="date">Date: {result['date']}</p>
+                        <p class="score">Score: {result['score']} out of {result['total_questions']}</p>
+                        <p class="time">Time taken: {format_time(result['time_taken'])}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
             
             if st.button("Logout", key="logout_after_attempt"):
                 st.session_state.logged_in = False
@@ -212,7 +363,7 @@ if st.session_state.logged_in:
                 st.session_state.score = 0
                 st.rerun()
         else:
-            # Regular quiz interface
+            # Regular quiz interface for normal users
             st.write(f"Welcome, {st.session_state.username}!")
 
             # Define the time limit in seconds
@@ -278,13 +429,18 @@ if st.session_state.logged_in:
 
             # Check if quiz is completed
             if st.session_state.quiz_completed:
-                # Calculate time taken
                 time_taken = time.time() - st.session_state.start_time
                 
-                st.write("🎉 Quiz Completed! 🎉")
-                st.write(f"Your final score is: {st.session_state.score} out of {len(questions)}")
-                st.write(f"Time taken: {format_time(time_taken)}")
-                st.write("Thank you for taking the quiz!")
+                # Create a container for completion result
+                with st.container():
+                    st.markdown(f"""
+                    <div class="result-box user-result-box">
+                        <h3>🎉 Quiz Completed! 🎉</h3>
+                        <p class="score">Final Score: {st.session_state.score} out of {len(questions)}</p>
+                        <p class="time">Time taken: {format_time(time_taken)}</p>
+                        <p>Thank you for taking the quiz!</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
                 # Save the result
                 if save_quiz_result(
